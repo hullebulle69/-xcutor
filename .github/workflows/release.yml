@@ -1,0 +1,83 @@
+name: Build & Release
+
+# Triggers:
+#   • Push a tag like "v1.0.0"  → build + create GitHub Release with EXEs attached.
+#   • workflow_dispatch (manual) → build only, upload as job artifacts (no Release).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create releases
+
+jobs:
+  build:
+    name: Build Windows EXEs
+    runs-on: windows-latest
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The injector has no Luau dependency, so we skip submodule init here.
+          # To also build xcutor.dll, change this to: submodules: recursive
+          submodules: false
+
+      # ── C++ injector (xcutor-inject.exe) ──────────────────────────────────
+      - name: Configure CMake (injector only)
+        working-directory: injector
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build xcutor-inject.exe
+        working-directory: injector
+        run: cmake --build build --config Release
+
+      - name: Verify injector EXE
+        run: Test-Path injector\build\Release\xcutor-inject.exe | Should -Be $true
+        shell: pwsh
+        continue-on-error: true   # non-fatal: let artifact upload tell us if it's missing
+
+      # ── WPF UI (Executor.exe) ─────────────────────────────────────────────
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish Executor.exe (self-contained single file)
+        run: |
+          dotnet publish ui/Executor.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            --output dist
+        shell: pwsh
+
+      # ── Upload as build artifacts (always) ───────────────────────────────
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcutor-windows-x64
+          retention-days: 30
+          path: |
+            injector/build/Release/xcutor-inject.exe
+            dist/Executor.exe
+
+      # ── Create GitHub Release (tag pushes only) ───────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Executor ${{ github.ref_name }}"
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}  # v1.0.0-beta → pre-release
+          generate_release_notes: true
+          files: |
+            injector/build/Release/xcutor-inject.exe
+            dist/Executor.exe

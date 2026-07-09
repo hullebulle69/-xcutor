@@ -97,6 +97,17 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 }
 
 // ---------------------------------------------------------------------------
+// RemoteScriptArgs
+//
+// Argument block written into the target process by the WPF injector.
+// xcutor_execute_remote receives a pointer to this struct as its thread param.
+// ---------------------------------------------------------------------------
+struct RemoteScriptArgs {
+    char source[0x4000];    // up to 16 KB of Lua source (UTF-8, null-terminated)
+    char chunk_name[64];    // name shown in error messages
+};
+
+// ---------------------------------------------------------------------------
 // Exported C API
 //
 // Lets an external loader call into the bridge without C++ name mangling.
@@ -118,6 +129,20 @@ XCUTOR_API void xcutor_set_global_number(const char* name, double value) {
 
 XCUTOR_API void xcutor_set_global_string(const char* name, const char* value) {
     g_bridge.set_global_string(name, value);
+}
+
+// Called via CreateRemoteThread from the WPF UI.  The parameter is a pointer
+// to a RemoteScriptArgs struct allocated (and later freed) by the caller.
+XCUTOR_API DWORD WINAPI xcutor_execute_remote(LPVOID param) {
+    if (!param) return 1;
+    const auto* args = static_cast<const RemoteScriptArgs*>(param);
+    const bool ok = g_bridge.run(
+        std::string_view(args->source,
+                         strnlen(args->source, sizeof(args->source))),
+        std::string_view(args->chunk_name,
+                         strnlen(args->chunk_name, sizeof(args->chunk_name)))
+    );
+    return ok ? 0 : 1;
 }
 
 } // extern "C"

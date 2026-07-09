@@ -42,3 +42,6 @@ if(MSVC)
 else()
     target_compile_options(xcutor PRIVATE -Wall -Wextra -Werror)
 endif()
+
+# ── Injector executable ───────────────────────────────────────────────────────
+add_subdirectory(injector)
