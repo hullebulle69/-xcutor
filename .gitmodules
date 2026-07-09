@@ -1,0 +1,4 @@
+[submodule "extern/luau"]
+	path = extern/luau
+	url  = https://github.com/luau-lang/luau.git
+	shallow = true
