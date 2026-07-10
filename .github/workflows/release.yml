@@ -26,8 +26,11 @@ jobs:
       # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive   # needed for extern/luau (xcutor.dll)
+
+      # The Luau submodule gitlink was never committed to the repo, so
+      # submodules: recursive is a no-op.  Clone it directly instead.
+      - name: Clone Luau into extern/luau
+        run: git clone --depth=1 https://github.com/luau-lang/luau.git extern/luau
 
       # ── C++ DLL (xcutor.dll) ──────────────────────────────────────────────
       - name: Configure CMake (DLL)
