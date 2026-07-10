@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace Executor;
@@ -81,19 +82,28 @@ public partial class MainWindow : Window
     static extern uint GetModuleFileNameExW(nint hProc, nint hMod,
                                             StringBuilder name, uint size);
 
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool GetExitCodeProcess(nint hProcess, out uint lpExitCode);
+
     // Win32 constants
-    const uint PROCESS_ALL_ACCESS  = 0x1F0FFF;
-    const uint MEM_COMMIT_RESERVE  = 0x3000;
-    const uint MEM_RELEASE         = 0x8000;
-    const uint PAGE_READWRITE      = 0x04;
-    const uint INFINITE            = 0xFFFFFFFF;
-    const uint TH32CS_SNAPPROCESS  = 0x02;
-    const uint LIST_MODULES_64     = 0x01;
+    const uint PROCESS_ALL_ACCESS        = 0x1F0FFF;
+    const uint PROCESS_QUERY_LIMITED     = 0x1000;   // for IsProcessAlive
+    const uint MEM_COMMIT_RESERVE        = 0x3000;
+    const uint MEM_RELEASE               = 0x8000;
+    const uint PAGE_READWRITE            = 0x04;
+    const uint INFINITE                  = 0xFFFFFFFF;
+    const uint STILL_ACTIVE              = 259;       // GetExitCodeProcess sentinel
+    const uint TH32CS_SNAPPROCESS        = 0x02;
+    const uint LIST_MODULES_64           = 0x01;
 
     // ── Application state ─────────────────────────────────────────────────
     private uint    _injectedPid  = 0;
     private string  _injectedDll  = string.Empty;
     private bool    _isInjected   = false;
+
+    // ── Auto-attach state ─────────────────────────────────────────────────
+    private DispatcherTimer? _attachTimer;
+    private bool             _autoAttachActive = false;
 
     // ── Constructor ───────────────────────────────────────────────────────
     public MainWindow()
@@ -181,6 +191,118 @@ public partial class MainWindow : Window
     {
         EditorBox.Clear();
         SetStatus("Editor cleared.");
+    }
+
+    // ── Auto-Attach ───────────────────────────────────────────────────────
+
+    private void AutoAttachBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (_autoAttachActive)
+            StopAutoAttach(userCancelled: true);
+        else
+            StartAutoAttach();
+    }
+
+    private void StartAutoAttach()
+    {
+        _autoAttachActive = true;
+
+        // E895 = Stop/Cancel circle — indicates the watcher is running.
+        AutoAttachIcon.Text       = "\uE895";
+        AutoAttachIcon.Foreground = new SolidColorBrush(Color.FromRgb(0xF8, 0x51, 0x49));
+        AutoAttachLabel.Text      = "Stop Watching";
+
+        // DispatcherTimer fires on the UI thread — no Dispatcher.Invoke needed.
+        _attachTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+        _attachTimer.Tick += AutoAttachTick;
+        _attachTimer.Start();
+
+        SetStatus($"Watching for {ProcessBox.Text.Trim()}…");
+    }
+
+    private void StopAutoAttach(bool userCancelled = false)
+    {
+        _attachTimer?.Stop();
+        _attachTimer      = null;
+        _autoAttachActive = false;
+
+        // Restore to E946 (Timer) — idle state.
+        AutoAttachIcon.Text       = "\uE946";
+        AutoAttachIcon.Foreground = (Brush)FindResource("TextSecond");
+        AutoAttachLabel.Text      = "Auto-Attach";
+
+        if (userCancelled)
+            SetStatus("Auto-attach stopped.");
+    }
+
+    private void AutoAttachTick(object? sender, EventArgs e)
+    {
+        string procName = ProcessBox.Text.Trim();
+        string dllPath  = DllPathBox.Text.Trim();
+
+        if (_isInjected)
+        {
+            // Monitor the live process: if it exits, reset so we can re-attach
+            // the next time the user launches it.
+            if (!IsProcessAlive(_injectedPid))
+            {
+                _isInjected  = false;
+                _injectedPid = 0;
+                _injectedDll = string.Empty;
+                InjectedBadge.Visibility = Visibility.Collapsed;
+                SetStatus($"Process closed — watching for {procName}…");
+            }
+            return;
+        }
+
+        uint pid = FindPid(procName);
+
+        if (pid == 0)
+        {
+            SetStatus($"Watching for {procName}…");
+            return;
+        }
+
+        if (!File.Exists(dllPath))
+        {
+            SetStatus($"DLL not found: {dllPath}", error: true);
+            StopAutoAttach();
+            return;
+        }
+
+        // Process appeared — inject.
+        SetStatus($"Found {procName} (PID {pid}), injecting…");
+        bool ok = Inject(pid, dllPath);
+        if (ok)
+        {
+            _injectedPid = pid;
+            _injectedDll = dllPath;
+            _isInjected  = true;
+            InjectedBadge.Visibility = Visibility.Visible;
+            InjectedLabel.Text       = $"Attached · {procName}";
+            SetStatus($"Auto-attached to {procName} (PID {pid})", success: true);
+        }
+        else
+        {
+            SetStatus($"Auto-inject failed — {Win32Error()}", error: true);
+        }
+    }
+
+    /// <summary>
+    /// Returns true if the process is still running.
+    /// Uses PROCESS_QUERY_LIMITED_INFORMATION (0x1000) — works even without admin
+    /// rights on most user-space processes.
+    /// </summary>
+    private bool IsProcessAlive(uint pid)
+    {
+        nint h = OpenProcess(PROCESS_QUERY_LIMITED, false, pid);
+        if (h == 0) return false;
+        try
+        {
+            GetExitCodeProcess(h, out uint code);
+            return code == STILL_ACTIVE;
+        }
+        finally { CloseHandle(h); }
     }
 
     // ── Editor: line numbers ──────────────────────────────────────────────
