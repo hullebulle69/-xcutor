@@ -1,8 +1,49 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include <cstdint>
+#include <string>
+#include <string_view>
+
 #include "lua_bridge.h"
 #include "game_state.h"
+
+// ---------------------------------------------------------------------------
+// Base64 decoder
+// ---------------------------------------------------------------------------
+static std::string base64_decode(std::string_view input) {
+    // Maps ASCII byte → 6-bit base64 value; 255 = not a base64 character.
+    static constexpr uint8_t kDec[128] = {
+        255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255, // 0-15
+        255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255, // 16-31
+        255,255,255,255,255,255,255,255,255,255,255, 62,255,255,255, 63, // 32-47  (+, /)
+         52, 53, 54, 55, 56, 57, 58, 59, 60, 61,255,255,255,255,255,255, // 48-63  (0-9)
+        255,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // 64-79  (A-O)
+         15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,255,255,255,255,255, // 80-95  (P-Z)
+        255, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // 96-111 (a-o)
+         41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,255,255,255,255,255, // 112-127 (p-z)
+    };
+
+    std::string out;
+    out.reserve(input.size() * 3 / 4 + 2);
+
+    uint32_t acc  = 0;
+    int      bits = 0;
+
+    for (unsigned char c : input) {
+        if (c == '=') break;
+        if (c >= 128) continue;
+        const uint8_t v = kDec[c];
+        if (v == 255) continue;
+        acc   = (acc << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out += static_cast<char>((acc >> bits) & 0xFF);
+        }
+    }
+    return out;
+}
 
 // ---------------------------------------------------------------------------
 // Module-level bridge instance
@@ -133,12 +174,17 @@ XCUTOR_API void xcutor_set_global_string(const char* name, const char* value) {
 
 // Called via CreateRemoteThread from the WPF UI.  The parameter is a pointer
 // to a RemoteScriptArgs struct allocated (and later freed) by the caller.
+// The source field carries the Lua script as base64-encoded UTF-8.
 XCUTOR_API DWORD WINAPI xcutor_execute_remote(LPVOID param) {
     if (!param) return 1;
     const auto* args = static_cast<const RemoteScriptArgs*>(param);
+
+    const std::string_view encoded(args->source,
+                                   strnlen(args->source, sizeof(args->source)));
+    const std::string source = base64_decode(encoded);
+
     const bool ok = g_bridge.run(
-        std::string_view(args->source,
-                         strnlen(args->source, sizeof(args->source))),
+        std::string_view(source.data(), source.size()),
         std::string_view(args->chunk_name,
                          strnlen(args->chunk_name, sizeof(args->chunk_name)))
     );

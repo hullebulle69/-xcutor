@@ -320,17 +320,19 @@ public partial class MainWindow : Window
 
             // ── 3. Marshal RemoteScriptArgs into remote memory ─────────────
             // struct layout must mirror RemoteScriptArgs in dllmain.cpp:
-            //   char source[0x4000]   (16 384 bytes, UTF-8 null-terminated)
+            //   char source[0x4000]   (16 384 bytes, base64-encoded UTF-8, null-terminated)
             //   char chunk_name[64]
             const int SRC_SIZE   = 0x4000;
             const int NAME_SIZE  = 64;
             const int TOTAL      = SRC_SIZE + NAME_SIZE;
 
-            byte[] srcBytes  = Encoding.UTF8.GetBytes(source);
-            if (srcBytes.Length >= SRC_SIZE) return false;   // script too large
+            // Base64-encode the source so the transport is not raw Lua text.
+            byte[] srcBytes    = Encoding.UTF8.GetBytes(source);
+            byte[] encodedBytes = Encoding.ASCII.GetBytes(Convert.ToBase64String(srcBytes));
+            if (encodedBytes.Length >= SRC_SIZE) return false;   // script too large after encoding
 
             byte[] argBuf = new byte[TOTAL];
-            Buffer.BlockCopy(srcBytes,  0, argBuf, 0,        srcBytes.Length);
+            Buffer.BlockCopy(encodedBytes, 0, argBuf, 0, encodedBytes.Length);
             byte[] nameBytes = Encoding.UTF8.GetBytes("ui\0");
             Buffer.BlockCopy(nameBytes, 0, argBuf, SRC_SIZE, nameBytes.Length);
 
