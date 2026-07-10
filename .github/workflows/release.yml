@@ -22,12 +22,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # The injector has no Luau dependency, so we skip submodule init here.
-          # To also build xcutor.dll, change this to: submodules: recursive
-          submodules: false
+          submodules: recursive   # needed for extern/luau (xcutor.dll)
+
+      # ── C++ DLL (xcutor.dll) ──────────────────────────────────────────────
+      - name: Configure CMake (DLL)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build xcutor.dll
+        run: cmake --build build --config Release
 
       # ── C++ injector (xcutor-inject.exe) ──────────────────────────────────
-      - name: Configure CMake (injector only)
+      - name: Configure CMake (injector)
         working-directory: injector
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
@@ -66,6 +71,7 @@ jobs:
           name: xcutor-windows-x64
           retention-days: 30
           path: |
+            build/Release/xcutor.dll
             injector/build/Release/xcutor-inject.exe
             dist/Executor.exe
 
@@ -79,5 +85,6 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}  # v1.0.0-beta → pre-release
           generate_release_notes: true
           files: |
+            build/Release/xcutor.dll
             injector/build/Release/xcutor-inject.exe
             dist/Executor.exe

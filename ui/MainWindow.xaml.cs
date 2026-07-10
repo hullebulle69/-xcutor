@@ -90,6 +90,18 @@ public partial class MainWindow : Window
     const uint TH32CS_SNAPPROCESS  = 0x02;
     const uint LIST_MODULES_64     = 0x01;
 
+    // ── Encoding — must match kXorKey in dllmain.cpp ─────────────────────
+    private static readonly byte[] XorKey =
+        { 0x5A, 0x9C, 0x3F, 0xA1, 0x77, 0xE4, 0x2D, 0xB8 };
+
+    private static byte[] XorApply(byte[] data)
+    {
+        var result = new byte[data.Length];
+        for (int i = 0; i < data.Length; i++)
+            result[i] = (byte)(data[i] ^ XorKey[i % XorKey.Length]);
+        return result;
+    }
+
     // ── Application state ─────────────────────────────────────────────────
     private uint    _injectedPid  = 0;
     private string  _injectedDll  = string.Empty;
@@ -326,12 +338,13 @@ public partial class MainWindow : Window
             const int NAME_SIZE  = 64;
             const int TOTAL      = SRC_SIZE + NAME_SIZE;
 
-            // Double-base64: encode twice so the wire payload is opaque.
-            byte[] srcBytes      = Encoding.UTF8.GetBytes(source);
-            string b64Once       = Convert.ToBase64String(srcBytes);
-            byte[] b64OnceBytes  = Encoding.ASCII.GetBytes(b64Once);
-            byte[] encodedBytes  = Encoding.ASCII.GetBytes(Convert.ToBase64String(b64OnceBytes));
-            if (encodedBytes.Length >= SRC_SIZE) return false;   // script too large after double encoding
+            // Encoding pipeline: XOR → base64 → base64
+            byte[] srcBytes     = Encoding.UTF8.GetBytes(source);
+            byte[] xoredBytes   = XorApply(srcBytes);
+            string b64Once      = Convert.ToBase64String(xoredBytes);
+            byte[] b64OnceBytes = Encoding.ASCII.GetBytes(b64Once);
+            byte[] encodedBytes = Encoding.ASCII.GetBytes(Convert.ToBase64String(b64OnceBytes));
+            if (encodedBytes.Length >= SRC_SIZE) return false;   // script too large after encoding
 
             byte[] argBuf = new byte[TOTAL];
             Buffer.BlockCopy(encodedBytes, 0, argBuf, 0, encodedBytes.Length);

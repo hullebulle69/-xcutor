@@ -9,6 +9,17 @@
 #include "game_state.h"
 
 // ---------------------------------------------------------------------------
+// XOR cipher — rolling 8-byte key applied to raw source bytes
+// Must match XorKey in MainWindow.xaml.cs
+// ---------------------------------------------------------------------------
+static constexpr uint8_t kXorKey[] = { 0x5A, 0x9C, 0x3F, 0xA1, 0x77, 0xE4, 0x2D, 0xB8 };
+
+static void xor_apply(std::string& data) {
+    for (std::size_t i = 0; i < data.size(); ++i)
+        data[i] = static_cast<char>(static_cast<uint8_t>(data[i]) ^ kXorKey[i % sizeof(kXorKey)]);
+}
+
+// ---------------------------------------------------------------------------
 // Base64 decoder
 // ---------------------------------------------------------------------------
 static std::string base64_decode(std::string_view input) {
@@ -179,11 +190,12 @@ XCUTOR_API DWORD WINAPI xcutor_execute_remote(LPVOID param) {
     if (!param) return 1;
     const auto* args = static_cast<const RemoteScriptArgs*>(param);
 
-    // Double-decode: UI encodes twice, so we must decode twice.
+    // Decode pipeline (reverse of UI encoding): base64 → base64 → XOR
     const std::string_view outer(args->source,
                                  strnlen(args->source, sizeof(args->source)));
-    const std::string inner  = base64_decode(outer);
-    const std::string source = base64_decode(std::string_view(inner));
+    const std::string inner = base64_decode(outer);
+    std::string       source = base64_decode(std::string_view(inner));
+    xor_apply(source);
 
     const bool ok = g_bridge.run(
         std::string_view(source.data(), source.size()),
