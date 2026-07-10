@@ -1,13 +1,18 @@
 name: Build & Release
 
 # Triggers:
-#   • Push a tag like "v1.0.0"  → build + create GitHub Release with EXEs attached.
-#   • workflow_dispatch (manual) → build only, upload as job artifacts (no Release).
+#   • Push a tag like "v1.0.0"      → build + create GitHub Release with EXEs attached.
+#   • workflow_dispatch (manual run) → build + create GitHub Release using the given version.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
 
 permissions:
   contents: write   # needed to create releases
@@ -75,15 +80,25 @@ jobs:
             injector/build/Release/xcutor-inject.exe
             dist/Executor.exe
 
-      # ── Create GitHub Release (tag pushes only) ───────────────────────────
+      # ── Create GitHub Release (tag pushes and manual runs) ───────────────
+      - name: Resolve release version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref }}" -like "refs/tags/*") {
+            echo "tag=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          } else {
+            echo "tag=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: "Executor ${{ github.ref_name }}"
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: "Executor ${{ steps.ver.outputs.tag }}"
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}  # v1.0.0-beta → pre-release
-          generate_release_notes: true
+          prerelease: ${{ contains(steps.ver.outputs.tag, '-') }}
+          generate_release_notes: false
           files: |
             build/Release/xcutor.dll
             injector/build/Release/xcutor-inject.exe
