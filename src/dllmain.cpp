@@ -144,7 +144,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 // xcutor_execute_remote receives a pointer to this struct as its thread param.
 // ---------------------------------------------------------------------------
 struct RemoteScriptArgs {
-    char source[0x4000];    // up to 16 KB of Lua source (UTF-8, null-terminated)
+    char source[0x8000];    // up to 32 KB — accommodates double-base64 overhead
     char chunk_name[64];    // name shown in error messages
 };
 
@@ -179,9 +179,11 @@ XCUTOR_API DWORD WINAPI xcutor_execute_remote(LPVOID param) {
     if (!param) return 1;
     const auto* args = static_cast<const RemoteScriptArgs*>(param);
 
-    const std::string_view encoded(args->source,
-                                   strnlen(args->source, sizeof(args->source)));
-    const std::string source = base64_decode(encoded);
+    // Double-decode: UI encodes twice, so we must decode twice.
+    const std::string_view outer(args->source,
+                                 strnlen(args->source, sizeof(args->source)));
+    const std::string inner  = base64_decode(outer);
+    const std::string source = base64_decode(std::string_view(inner));
 
     const bool ok = g_bridge.run(
         std::string_view(source.data(), source.size()),
