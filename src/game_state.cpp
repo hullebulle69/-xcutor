@@ -1,10 +1,8 @@
 #include "game_state.h"
 
-// Pull the Lua API in only this translation unit.
-extern "C" {
+// Luau C++ API (Luau is a C++ library — no extern "C" wrapper)
 #include "lua.h"
 #include "lualib.h"
-}
 
 #include <cstring>
 

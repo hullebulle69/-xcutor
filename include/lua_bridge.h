@@ -6,12 +6,10 @@
 #include <string>
 #include <string_view>
 
-// Luau C API
-extern "C" {
+// Luau C++ API (Luau is a C++ library — no extern "C" wrapper)
 #include "lua.h"
 #include "lualib.h"
 #include "luacode.h"  // luau_compile / luau_load
-}
 
 #ifdef XCUTOR_EXPORTS
 #  define XCUTOR_API __declspec(dllexport)
