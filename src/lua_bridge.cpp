@@ -144,7 +144,7 @@ void LuaBridge::set_global_nil(const char* name) {
 bool LuaBridge::get_global_int(const char* name, lua_Integer& out) {
     std::unique_lock lock(vm_mutex);
     lua_getglobal(L, name);
-    if (!lua_isinteger(L, -1)) { lua_pop(L, 1); return false; }
+    if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }
     out = lua_tointeger(L, -1);
     lua_pop(L, 1);
     return true;
@@ -204,9 +204,6 @@ void LuaBridge::set_print_sink(PrintSink sink) {
 // The Lua print() override lives in a free function so it can be a plain
 // lua_CFunction.  It captures 'this' via the upvalue mechanism.
 static int lua_print_override(lua_State* L) {
-    // Retrieve the LuaBridge pointer from upvalue 1.
-    auto* bridge = static_cast<LuaBridge*>(lua_touserdata(L, lua_upvalueindex(1)));
-
     const int n = lua_gettop(L);
     std::string line;
     line.reserve(128);
@@ -217,11 +214,6 @@ static int lua_print_override(lua_State* L) {
         const char* s = luaL_tolstring(L, i, &len); // converts to string
         line.append(s, len);
         lua_pop(L, 1); // pop the string luaL_tolstring pushed
-    }
-
-    if (bridge && bridge->set_print_sink, true) {
-        // The sink is private; call via the public accessor pattern below.
-        // We stash the sink pointer itself as a second upvalue instead.
     }
 
     // Upvalue 2 is a lightuserdata pointing to the PrintSink object.

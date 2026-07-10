@@ -38,7 +38,7 @@ target_compile_definitions(xcutor PRIVATE
 )
 
 if(MSVC)
-    target_compile_options(xcutor PRIVATE /W4 /WX /EHsc)
+    target_compile_options(xcutor PRIVATE /W4 /WX /EHsc /wd4251 /wd4100)
 else()
     target_compile_options(xcutor PRIVATE -Wall -Wextra -Werror)
 endif()
