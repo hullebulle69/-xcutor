@@ -32,26 +32,27 @@ jobs:
       - name: Clone Luau into extern/luau
         run: git clone --depth=1 https://github.com/luau-lang/luau.git extern/luau
 
+      # ── MSVC environment (required for Ninja + cl.exe) ────────────────────
+      - name: Setup MSVC Developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+
       # ── C++ DLL (xcutor.dll) ──────────────────────────────────────────────
+      # Use Ninja generator: unlike the VS generator it correctly passes all
+      # static library paths directly into the linker command line.
       - name: Configure CMake (DLL)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build xcutor.dll
-        run: cmake --build build --config Release
+        run: cmake --build build
 
       # ── C++ injector (xcutor-inject.exe) ──────────────────────────────────
       - name: Configure CMake (injector)
         working-directory: injector
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build xcutor-inject.exe
         working-directory: injector
-        run: cmake --build build --config Release
-
-      - name: Verify injector EXE
-        run: Test-Path injector\build\Release\xcutor-inject.exe | Should -Be $true
-        shell: pwsh
-        continue-on-error: true   # non-fatal: let artifact upload tell us if it's missing
+        run: cmake --build build
 
       # ── WPF UI (Executor.exe) ─────────────────────────────────────────────
       - name: Setup .NET 8
@@ -79,8 +80,8 @@ jobs:
           name: xcutor-windows-x64
           retention-days: 30
           path: |
-            build/Release/xcutor.dll
-            injector/build/Release/xcutor-inject.exe
+            build/xcutor.dll
+            injector/build/xcutor-inject.exe
             dist/Executor.exe
 
       # ── Create GitHub Release (tag pushes and manual runs) ───────────────
@@ -103,6 +104,6 @@ jobs:
           prerelease: ${{ contains(steps.ver.outputs.tag, '-') }}
           generate_release_notes: false
           files: |
-            build/Release/xcutor.dll
-            injector/build/Release/xcutor-inject.exe
+            build/xcutor.dll
+            injector/build/xcutor-inject.exe
             dist/Executor.exe

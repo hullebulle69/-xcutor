@@ -26,20 +26,12 @@ target_include_directories(xcutor PRIVATE
     extern/luau/Common/include
 )
 
-# Use file-path generator expressions instead of target names to work around
-# the MSVC VS-generator's project-reference mechanism not passing static libs
-# into the SHARED target's link command.  We also enumerate the full transitive
-# closure manually because file-path entries don't propagate PUBLIC deps:
-#   Luau.VM        → Luau.Common
-#   Luau.Compiler  → Luau.Ast → Luau.Common
-#                  → Luau.Bytecode → Luau.Common
-add_dependencies(xcutor Luau.VM Luau.Compiler Luau.Ast Luau.Bytecode Luau.Common)
 target_link_libraries(xcutor PRIVATE
-    "$<TARGET_LINKER_FILE:Luau.VM>"
-    "$<TARGET_LINKER_FILE:Luau.Compiler>"
-    "$<TARGET_LINKER_FILE:Luau.Ast>"
-    "$<TARGET_LINKER_FILE:Luau.Bytecode>"
-    "$<TARGET_LINKER_FILE:Luau.Common>"
+    Luau.VM
+    Luau.Compiler
+    Luau.Ast
+    Luau.Bytecode
+    Luau.Common
 )
 
 target_compile_definitions(xcutor PRIVATE
