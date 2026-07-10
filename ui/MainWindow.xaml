@@ -7,9 +7,9 @@
         MinHeight="440" MinWidth="680"
         WindowStyle="None"
         Background="#0D1117"
-        ResizeMode="CanResizeWithGrip">
+        ResizeMode="CanResizeWithGrip"
+        StateChanged="Window_StateChanged">
 
-    <!-- WindowChrome provides native resize + drag while keeping our custom look. -->
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="36"
                             ResizeBorderThickness="6"
@@ -17,29 +17,78 @@
                             CornerRadius="0"/>
     </shell:WindowChrome.WindowChrome>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         Window taskbar / alt-tab icon: blue tile with </> glyph.
+         WPF renders DrawingImage directly — no .ico file needed.
+    ═══════════════════════════════════════════════════════════════ -->
+    <Window.Icon>
+        <DrawingImage>
+            <DrawingImage.Drawing>
+                <DrawingGroup>
+                    <!-- Blue rounded tile -->
+                    <GeometryDrawing>
+                        <GeometryDrawing.Brush>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#1F6FEB" Offset="0"/>
+                                <GradientStop Color="#58A6FF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </GeometryDrawing.Brush>
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,16,16" RadiusX="3" RadiusY="3"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                    <!-- </> brackets -->
+                    <GeometryDrawing>
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="White" Thickness="1.4" StartLineCap="Round" EndLineCap="Round"/>
+                        </GeometryDrawing.Pen>
+                        <GeometryDrawing.Geometry>
+                            <PathGeometry Figures="M4,5 L2,8 L4,11  M12,5 L14,8 L12,11  M9.5,3.5 L6.5,12.5"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingGroup>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+    </Window.Icon>
+
     <Window.Resources>
 
         <!-- ── Palette ─────────────────────────────────────────── -->
-        <SolidColorBrush x:Key="BgMain"        Color="#0D1117"/>
-        <SolidColorBrush x:Key="BgPanel"       Color="#161B22"/>
-        <SolidColorBrush x:Key="BgInput"       Color="#21262D"/>
-        <SolidColorBrush x:Key="BgInputFocus"  Color="#1C2128"/>
-        <SolidColorBrush x:Key="BorderNorm"    Color="#30363D"/>
-        <SolidColorBrush x:Key="BorderFocus"   Color="#58A6FF"/>
-        <SolidColorBrush x:Key="Accent"        Color="#58A6FF"/>
-        <SolidColorBrush x:Key="TextPrimary"   Color="#E6EDF3"/>
-        <SolidColorBrush x:Key="TextSecond"    Color="#7D8590"/>
-        <SolidColorBrush x:Key="TextMuted"     Color="#484F58"/>
-        <SolidColorBrush x:Key="GreenNorm"     Color="#238636"/>
-        <SolidColorBrush x:Key="GreenHover"    Color="#2EA043"/>
-        <SolidColorBrush x:Key="GreenPress"    Color="#1A7F37"/>
-        <SolidColorBrush x:Key="BlueNorm"      Color="#1F6FEB"/>
-        <SolidColorBrush x:Key="BlueHover"     Color="#388BFD"/>
-        <SolidColorBrush x:Key="BluePress"     Color="#0D62D1"/>
-        <SolidColorBrush x:Key="DangerColor"   Color="#F85149"/>
-        <SolidColorBrush x:Key="SuccessColor"  Color="#3FB950"/>
+        <SolidColorBrush x:Key="BgMain"       Color="#0D1117"/>
+        <SolidColorBrush x:Key="BgPanel"      Color="#161B22"/>
+        <SolidColorBrush x:Key="BgInput"      Color="#21262D"/>
+        <SolidColorBrush x:Key="BgInputFocus" Color="#1C2128"/>
+        <SolidColorBrush x:Key="BgTab"        Color="#0D1117"/>
+        <SolidColorBrush x:Key="BorderNorm"   Color="#30363D"/>
+        <SolidColorBrush x:Key="BorderFocus"  Color="#58A6FF"/>
+        <SolidColorBrush x:Key="Accent"       Color="#58A6FF"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="#E6EDF3"/>
+        <SolidColorBrush x:Key="TextSecond"   Color="#7D8590"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="#484F58"/>
+        <SolidColorBrush x:Key="GreenNorm"    Color="#238636"/>
+        <SolidColorBrush x:Key="GreenHover"   Color="#2EA043"/>
+        <SolidColorBrush x:Key="GreenPress"   Color="#1A7F37"/>
+        <SolidColorBrush x:Key="BlueNorm"     Color="#1F6FEB"/>
+        <SolidColorBrush x:Key="BlueHover"    Color="#388BFD"/>
+        <SolidColorBrush x:Key="BluePress"    Color="#0D62D1"/>
+        <SolidColorBrush x:Key="DangerBrush"  Color="#F85149"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#3FB950"/>
 
-        <!-- ── Text input (process/dll path boxes) ─────────────── -->
+        <!-- ── MDL2 icon style: inline glyph TextBlock ─────────── -->
+        <!-- Usage:  <TextBlock Style="{StaticResource Icon}" Text="&#xE768;"/> -->
+        <Style x:Key="Icon" TargetType="TextBlock">
+            <Setter Property="FontFamily"          Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize"            Value="12"/>
+            <Setter Property="VerticalAlignment"   Value="Center"/>
+            <Setter Property="IsHitTestVisible"    Value="False"/>
+        </Style>
+
+        <!-- Smaller variant for labels / status -->
+        <Style x:Key="IconSm" TargetType="TextBlock" BasedOn="{StaticResource Icon}">
+            <Setter Property="FontSize" Value="10"/>
+        </Style>
+
+        <!-- ── Text input ───────────────────────────────────────── -->
         <Style x:Key="InputStyle" TargetType="TextBox">
             <Setter Property="Background"              Value="{StaticResource BgInput}"/>
             <Setter Property="Foreground"              Value="{StaticResource TextPrimary}"/>
@@ -77,14 +126,14 @@
 
         <!-- ── Green button (Inject) ────────────────────────────── -->
         <Style x:Key="GreenBtn" TargetType="Button">
-            <Setter Property="Foreground"       Value="White"/>
-            <Setter Property="Background"       Value="{StaticResource GreenNorm}"/>
-            <Setter Property="BorderThickness"  Value="0"/>
-            <Setter Property="Padding"          Value="16,0"/>
-            <Setter Property="Height"           Value="32"/>
-            <Setter Property="FontSize"         Value="13"/>
-            <Setter Property="FontWeight"       Value="SemiBold"/>
-            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="Background"      Value="{StaticResource GreenNorm}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="14,0"/>
+            <Setter Property="Height"          Value="32"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -105,7 +154,7 @@
                                         Value="{StaticResource GreenPress}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="root" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="root" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -115,14 +164,14 @@
 
         <!-- ── Blue button (Execute) ────────────────────────────── -->
         <Style x:Key="BlueBtn" TargetType="Button">
-            <Setter Property="Foreground"       Value="White"/>
-            <Setter Property="Background"       Value="{StaticResource BlueNorm}"/>
-            <Setter Property="BorderThickness"  Value="0"/>
-            <Setter Property="Padding"          Value="20,0"/>
-            <Setter Property="Height"           Value="34"/>
-            <Setter Property="FontSize"         Value="13"/>
-            <Setter Property="FontWeight"       Value="SemiBold"/>
-            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="Background"      Value="{StaticResource BlueNorm}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="18,0"/>
+            <Setter Property="Height"          Value="34"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -143,7 +192,7 @@
                                         Value="{StaticResource BluePress}"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="root" Property="Opacity" Value="0.45"/>
+                                <Setter TargetName="root" Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -153,14 +202,14 @@
 
         <!-- ── Ghost / outline button (Browse, Clear) ───────────── -->
         <Style x:Key="GhostBtn" TargetType="Button">
-            <Setter Property="Foreground"       Value="{StaticResource TextSecond}"/>
-            <Setter Property="Background"       Value="Transparent"/>
-            <Setter Property="BorderBrush"      Value="{StaticResource BorderNorm}"/>
-            <Setter Property="BorderThickness"  Value="1"/>
-            <Setter Property="Padding"          Value="14,0"/>
-            <Setter Property="Height"           Value="32"/>
-            <Setter Property="FontSize"         Value="13"/>
-            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Foreground"      Value="{StaticResource TextSecond}"/>
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource BorderNorm}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="12,0"/>
+            <Setter Property="Height"          Value="32"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -181,8 +230,7 @@
                                         Value="{StaticResource TextPrimary}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="root" Property="Background"
-                                        Value="#2D333B"/>
+                                <Setter TargetName="root" Property="Background" Value="#2D333B"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -190,15 +238,15 @@
             </Setter>
         </Style>
 
-        <!-- ── Title-bar icon button ────────────────────────────── -->
+        <!-- ── Title-bar chrome button ──────────────────────────── -->
         <Style x:Key="TitleBtn" TargetType="Button">
-            <Setter Property="Foreground"       Value="{StaticResource TextSecond}"/>
-            <Setter Property="Background"       Value="Transparent"/>
-            <Setter Property="BorderThickness"  Value="0"/>
-            <Setter Property="Width"            Value="40"/>
-            <Setter Property="Height"           Value="36"/>
-            <Setter Property="FontSize"         Value="11"/>
-            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Foreground"      Value="{StaticResource TextSecond}"/>
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width"           Value="42"/>
+            <Setter Property="Height"          Value="36"/>
+            <!-- MDL2 glyphs look best at 10-11 pt via the icon TextBlock inside -->
+            <Setter Property="Cursor"          Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -219,8 +267,8 @@
             </Setter>
         </Style>
 
-        <!-- Close button goes red on hover -->
-        <Style x:Key="CloseBtn" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
+        <!-- Close button: red on hover -->
+        <Style x:Key="CloseBtnStyle" TargetType="Button" BasedOn="{StaticResource TitleBtn}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="#C62828"/>
@@ -232,17 +280,18 @@
     </Window.Resources>
 
     <!-- ══════════════════════════════════════════════════════════════
-         Root layout
+         Root grid
     ═══════════════════════════════════════════════════════════════ -->
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="36"/>   <!-- 0 – title bar       -->
-            <RowDefinition Height="Auto"/> <!-- 1 – inject controls -->
-            <RowDefinition Height="1"/>    <!-- 2 – divider         -->
-            <RowDefinition Height="*"/>    <!-- 3 – editor          -->
-            <RowDefinition Height="1"/>    <!-- 4 – divider         -->
-            <RowDefinition Height="54"/>   <!-- 5 – action bar      -->
-            <RowDefinition Height="26"/>   <!-- 6 – status bar      -->
+            <RowDefinition Height="36"/>   <!-- 0  title bar       -->
+            <RowDefinition Height="Auto"/> <!-- 1  inject controls -->
+            <RowDefinition Height="1"/>    <!-- 2  divider         -->
+            <RowDefinition Height="30"/>   <!-- 3  editor tab bar  -->
+            <RowDefinition Height="*"/>    <!-- 4  editor          -->
+            <RowDefinition Height="1"/>    <!-- 5  divider         -->
+            <RowDefinition Height="54"/>   <!-- 6  action bar      -->
+            <RowDefinition Height="26"/>   <!-- 7  status bar      -->
         </Grid.RowDefinitions>
 
         <!-- ── 0 · TITLE BAR ──────────────────────────────────────── -->
@@ -252,42 +301,67 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Drag zone + brand -->
+            <!-- Drag zone + logo + title -->
             <StackPanel Grid.Column="0" Orientation="Horizontal"
-                        VerticalAlignment="Center" Margin="14,0"
+                        VerticalAlignment="Center" Margin="12,0"
                         MouseLeftButtonDown="TitleBar_MouseDown">
-                <Ellipse Width="9" Height="9" Fill="#58A6FF" Margin="0,0,9,0"/>
+
+                <!-- Inline </> app logo (16×16 ViewBox) -->
+                <Viewbox Width="16" Height="16" Margin="0,0,8,0">
+                    <Grid Width="16" Height="16">
+                        <Rectangle RadiusX="3" RadiusY="3">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#1F6FEB" Offset="0"/>
+                                    <GradientStop Color="#58A6FF" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Path Stroke="White" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M4,5 L2,8 L4,11  M12,5 L14,8 L12,11  M9.5,3.5 L6.5,12.5"/>
+                    </Grid>
+                </Viewbox>
+
                 <TextBlock Text="Executor"
                            Foreground="{StaticResource TextPrimary}"
                            FontSize="13" FontWeight="SemiBold"/>
-                <TextBlock Text="  · Lua Executor"
+                <TextBlock Text=" · Lua Executor"
                            Foreground="{StaticResource TextMuted}"
-                           FontSize="11" Margin="0,0,0,0"
-                           VerticalAlignment="Bottom" Padding="0,0,0,1"/>
+                           FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,1"/>
             </StackPanel>
 
-            <!-- Window controls -->
+            <!-- Window controls — MDL2 glyphs: E921 min, E922 max, E923 restore, E8BB close -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="─" Style="{StaticResource TitleBtn}"
+                <Button Style="{StaticResource TitleBtn}"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                        Click="MinimizeBtn_Click"/>
-                <Button x:Name="MaxBtn" Content="□" Style="{StaticResource TitleBtn}"
+                        Click="MinimizeBtn_Click" ToolTip="Minimize">
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE921;"
+                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                </Button>
+                <Button x:Name="MaxBtn" Style="{StaticResource TitleBtn}"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                        Click="MaximizeBtn_Click"/>
-                <Button Content="✕" Style="{StaticResource CloseBtn}"
+                        Click="MaximizeBtn_Click" ToolTip="Maximize">
+                    <TextBlock x:Name="MaxIcon" Style="{StaticResource IconSm}" Text="&#xE922;"
+                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                </Button>
+                <Button Style="{StaticResource CloseBtnStyle}"
                         shell:WindowChrome.IsHitTestVisibleInChrome="True"
-                        Click="CloseBtn_Click"/>
+                        Click="CloseBtn_Click" ToolTip="Close">
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE8BB;"
+                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                </Button>
             </StackPanel>
         </Grid>
 
         <!-- ── 1 · INJECT CONTROLS ───────────────────────────────── -->
-        <Border Grid.Row="1" Background="{StaticResource BgPanel}"
-                BorderBrush="{StaticResource BorderNorm}" BorderThickness="0,0,0,0">
+        <Border Grid.Row="1" Background="{StaticResource BgPanel}">
             <Grid Margin="14,10,14,12">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="58"/>  <!-- label -->
-                    <ColumnDefinition Width="*"/>   <!-- input -->
-                    <ColumnDefinition Width="Auto"/><!-- button -->
+                    <ColumnDefinition Width="70"/>  <!-- icon + label -->
+                    <ColumnDefinition Width="*"/>   <!-- input        -->
+                    <ColumnDefinition Width="Auto"/><!-- button       -->
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="32"/>
@@ -296,43 +370,99 @@
                 </Grid.RowDefinitions>
 
                 <!-- Process row -->
-                <TextBlock Grid.Row="0" Grid.Column="0"
-                           Text="Process" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextSecond}" FontSize="12"/>
-                <TextBox   x:Name="ProcessBox"
-                           Grid.Row="0" Grid.Column="1"
-                           Style="{StaticResource InputStyle}"
-                           Text="RobloxPlayerBeta.exe"/>
-                <Button    Grid.Row="0" Grid.Column="2"
-                           Content="Inject" Style="{StaticResource GreenBtn}"
-                           Margin="8,0,0,0" Click="InjectBtn_Click"/>
+                <StackPanel Grid.Row="0" Grid.Column="0"
+                            Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- E770 = ProcessorGlyph  (looks like a CPU/system chip) -->
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE770;"
+                               Foreground="{StaticResource TextMuted}" Margin="0,0,5,0"/>
+                    <TextBlock Text="Process"
+                               Foreground="{StaticResource TextSecond}" FontSize="12"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBox x:Name="ProcessBox"
+                         Grid.Row="0" Grid.Column="1"
+                         Style="{StaticResource InputStyle}"
+                         Text="RobloxPlayerBeta.exe"/>
+                <!-- E8D0 = Import (plug/upload icon — represents injection) -->
+                <Button Grid.Row="0" Grid.Column="2"
+                        Style="{StaticResource GreenBtn}"
+                        Margin="8,0,0,0" Click="InjectBtn_Click" ToolTip="Inject DLL into process">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE8D0;"
+                                   Foreground="White" Margin="0,0,6,0"/>
+                        <TextBlock Text="Inject" VerticalAlignment="Center" Foreground="White"/>
+                    </StackPanel>
+                </Button>
 
                 <!-- DLL row -->
-                <TextBlock Grid.Row="2" Grid.Column="0"
-                           Text="DLL" VerticalAlignment="Center"
-                           Foreground="{StaticResource TextSecond}" FontSize="12"/>
-                <TextBox   x:Name="DllPathBox"
-                           Grid.Row="2" Grid.Column="1"
-                           Style="{StaticResource InputStyle}"
-                           Text="C:\xcutor.dll"/>
-                <Button    Grid.Row="2" Grid.Column="2"
-                           Content="Browse" Style="{StaticResource GhostBtn}"
-                           Margin="8,0,0,0" Click="BrowseBtn_Click"/>
+                <StackPanel Grid.Row="2" Grid.Column="0"
+                            Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- E7B5 = Folder -->
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE7B5;"
+                               Foreground="{StaticResource TextMuted}" Margin="0,0,5,0"/>
+                    <TextBlock Text="DLL"
+                               Foreground="{StaticResource TextSecond}" FontSize="12"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBox x:Name="DllPathBox"
+                         Grid.Row="2" Grid.Column="1"
+                         Style="{StaticResource InputStyle}"
+                         Text="C:\xcutor.dll"/>
+                <!-- E8B7 = OpenFile -->
+                <Button Grid.Row="2" Grid.Column="2"
+                        Style="{StaticResource GhostBtn}"
+                        Margin="8,0,0,0" Click="BrowseBtn_Click" ToolTip="Select DLL file">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Icon}" Text="&#xE8B7;"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                   Margin="0,0,6,0"/>
+                        <TextBlock Text="Browse" VerticalAlignment="Center"
+                                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </StackPanel>
+                </Button>
             </Grid>
         </Border>
 
         <!-- ── 2 · DIVIDER ───────────────────────────────────────── -->
         <Border Grid.Row="2" Background="{StaticResource BorderNorm}"/>
 
-        <!-- ── 3 · EDITOR ────────────────────────────────────────── -->
-        <Grid Grid.Row="3" Background="{StaticResource BgMain}">
+        <!-- ── 3 · EDITOR TAB BAR ────────────────────────────────── -->
+        <Border Grid.Row="3" Background="#0A0E13"
+                BorderBrush="{StaticResource BorderNorm}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Active tab -->
+                <Border Background="{StaticResource BgMain}"
+                        BorderBrush="{StaticResource Accent}"
+                        BorderThickness="0,0,0,2"
+                        Padding="12,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- E943 = Page / Document icon -->
+                        <TextBlock Style="{StaticResource IconSm}" Text="&#xE943;"
+                                   Foreground="{StaticResource Accent}" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="TabFileName" Text="script.lua"
+                                   Foreground="{StaticResource TextPrimary}" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Spacer / add-tab hint -->
+                <Border Padding="10,0" VerticalAlignment="Stretch">
+                    <!-- E710 = Add -->
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE710;"
+                               Foreground="{StaticResource TextMuted}" VerticalAlignment="Center"
+                               ToolTip="New tab (not yet implemented)"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ── 4 · EDITOR ────────────────────────────────────────── -->
+        <Grid Grid.Row="4" Background="{StaticResource BgMain}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="44"/>   <!-- gutter / line nums -->
-                <ColumnDefinition Width="1"/>    <!-- gutter border       -->
-                <ColumnDefinition Width="*"/>    <!-- code area           -->
+                <ColumnDefinition Width="44"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Line number gutter -->
+            <!-- Line-number gutter -->
             <Border Grid.Column="0" Background="#0A0E13">
                 <ScrollViewer x:Name="LineScroll"
                              VerticalScrollBarVisibility="Hidden"
@@ -350,22 +480,19 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- Gutter separator -->
             <Border Grid.Column="1" Background="{StaticResource BorderNorm}"/>
 
-            <!-- Code TextBox -->
+            <!-- Code editor -->
             <TextBox x:Name="EditorBox"
                      Grid.Column="2"
                      Background="Transparent"
                      Foreground="{StaticResource TextPrimary}"
                      CaretBrush="{StaticResource Accent}"
                      SelectionBrush="#264F78"
-                     BorderBrush="Transparent"
-                     BorderThickness="0"
+                     BorderBrush="Transparent" BorderThickness="0"
                      FontFamily="Cascadia Code, Consolas, Courier New"
                      FontSize="13"
-                     AcceptsReturn="True"
-                     AcceptsTab="True"
+                     AcceptsReturn="True" AcceptsTab="True"
                      TextWrapping="NoWrap"
                      HorizontalScrollBarVisibility="Auto"
                      VerticalScrollBarVisibility="Auto"
@@ -382,27 +509,47 @@
             </TextBox>
         </Grid>
 
-        <!-- ── 4 · DIVIDER ───────────────────────────────────────── -->
-        <Border Grid.Row="4" Background="{StaticResource BorderNorm}"/>
+        <!-- ── 5 · DIVIDER ───────────────────────────────────────── -->
+        <Border Grid.Row="5" Background="{StaticResource BorderNorm}"/>
 
-        <!-- ── 5 · ACTION BAR ────────────────────────────────────── -->
-        <Border Grid.Row="5" Background="{StaticResource BgPanel}">
+        <!-- ── 6 · ACTION BAR ────────────────────────────────────── -->
+        <Border Grid.Row="6" Background="{StaticResource BgPanel}">
             <Grid Margin="14,0">
+
+                <!-- Left: Execute + Clear -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="▶  Execute" Style="{StaticResource BlueBtn}"
-                            Click="ExecuteBtn_Click"/>
-                    <Button Content="Clear" Style="{StaticResource GhostBtn}"
-                            Margin="8,0,0,0" Click="ClearBtn_Click"/>
+                    <!-- E768 = Play / Run -->
+                    <Button Style="{StaticResource BlueBtn}"
+                            Click="ExecuteBtn_Click" ToolTip="Run script in target process">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE768;"
+                                       Foreground="White" Margin="0,0,7,0"/>
+                            <TextBlock Text="Execute" VerticalAlignment="Center" Foreground="White"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- E894 = Clear / Erase -->
+                    <Button Style="{StaticResource GhostBtn}"
+                            Margin="8,0,0,0" Click="ClearBtn_Click" ToolTip="Clear editor">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Icon}" Text="&#xE894;"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                       Margin="0,0,6,0"/>
+                            <TextBlock Text="Clear" VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
-                <!-- Injected badge -->
+                <!-- Right: injected process badge -->
                 <StackPanel x:Name="InjectedBadge"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                             Visibility="Collapsed">
-                    <Ellipse Width="7" Height="7" Fill="{StaticResource SuccessColor}"
-                             Margin="0,0,6,0"/>
+                    <!-- E73E = Accept / checkmark -->
+                    <TextBlock Style="{StaticResource IconSm}" Text="&#xE73E;"
+                               Foreground="{StaticResource SuccessBrush}" Margin="0,0,5,0"/>
                     <TextBlock x:Name="InjectedLabel"
                                Foreground="{StaticResource TextSecond}"
                                FontSize="11" VerticalAlignment="Center"/>
@@ -410,18 +557,20 @@
             </Grid>
         </Border>
 
-        <!-- ── 6 · STATUS BAR ────────────────────────────────────── -->
-        <Border Grid.Row="6" Background="#010409">
+        <!-- ── 7 · STATUS BAR ────────────────────────────────────── -->
+        <Border Grid.Row="7" Background="#010409">
             <StackPanel Orientation="Horizontal"
                         VerticalAlignment="Center" Margin="14,0">
-                <Ellipse x:Name="StatusDot"
-                         Width="6" Height="6"
-                         Fill="{StaticResource TextMuted}"
-                         Margin="0,0,7,0"/>
+                <!-- E783 = ErrorBadge, E73E = Accept, E8FB = Sync -->
+                <TextBlock x:Name="StatusIcon"
+                           Style="{StaticResource IconSm}"
+                           Text="&#xE73E;"
+                           Foreground="{StaticResource TextMuted}"
+                           Margin="0,0,7,0"/>
                 <TextBlock x:Name="StatusText"
                            Text="Ready"
                            Foreground="{StaticResource TextSecond}"
-                           FontSize="11"/>
+                           FontSize="11" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
     </Grid>

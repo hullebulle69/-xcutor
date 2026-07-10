@@ -116,6 +116,11 @@ public partial class MainWindow : Window
                     ? WindowState.Normal
                     : WindowState.Maximized;
 
+    // Keep the maximize/restore MDL2 glyph in sync with actual window state.
+    private void Window_StateChanged(object sender, EventArgs e) =>
+        // E922 = ChromeMaximize, E923 = ChromeRestore
+        MaxIcon.Text = WindowState == WindowState.Maximized ? "" : "";
+
     // ── Browse ────────────────────────────────────────────────────────────
     private void BrowseBtn_Click(object sender, RoutedEventArgs e)
     {
@@ -198,10 +203,24 @@ public partial class MainWindow : Window
     private void SetStatus(string msg, bool error = false, bool success = false)
     {
         StatusText.Text = msg;
-        StatusDot.Fill  = new SolidColorBrush(
-            error   ? Color.FromRgb(0xF8, 0x51, 0x49) :
-            success ? Color.FromRgb(0x3F, 0xB9, 0x50) :
-                      Color.FromRgb(0x58, 0xA6, 0xFF));
+
+        // MDL2 glyphs: E783 = ErrorBadge (red),  E73E = Accept (green),
+        //              E8FB = Sync/processing (blue for neutral info)
+        if (error)
+        {
+            StatusIcon.Text       = "";
+            StatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(0xF8, 0x51, 0x49));
+        }
+        else if (success)
+        {
+            StatusIcon.Text       = "";
+            StatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x3F, 0xB9, 0x50));
+        }
+        else
+        {
+            StatusIcon.Text       = "";
+            StatusIcon.Foreground = new SolidColorBrush(Color.FromRgb(0x58, 0xA6, 0xFF));
+        }
     }
 
     private static string Win32Error()
