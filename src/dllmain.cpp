@@ -100,9 +100,8 @@ static void on_attach(HMODULE module) {
     // ── Run an initial bootstrap script ──────────────────────────────────
     // In production this might load from a file or a remote URL.
     constexpr std::string_view bootstrap = R"lua(
-        print("xcutor Lua environment ready")
-        print("Player alive:", game.isAlive())
-        print("Level:", game.getLevel())
+        print("xcutor ready | user:", game.getDisplayName(),
+              "| hp:", game.getHealth(), "/", game.getMaxHealth())
     )lua";
 
     if (!g_bridge.run(bootstrap, "bootstrap")) {

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <string_view>
+
+#include "offsets.h"
 
 #ifdef XCUTOR_EXPORTS
 #  define XCUTOR_API __declspec(dllexport)
@@ -9,16 +12,10 @@
 #  define XCUTOR_API __declspec(dllimport)
 #endif
 
-// Forward declaration – avoid pulling Lua headers into every translation unit.
 struct lua_State;
 
 // ---------------------------------------------------------------------------
 // Memory primitives
-//
-// When the DLL is injected into a target process, these helpers read and write
-// its virtual address space directly.  When running out-of-process (external
-// cheat / tool), swap the bodies for ReadProcessMemory / WriteProcessMemory
-// calls against a stored HANDLE.
 // ---------------------------------------------------------------------------
 namespace mem {
 
@@ -32,94 +29,86 @@ inline void write(uintptr_t addr, T value) noexcept {
     *reinterpret_cast<T*>(addr) = value;
 }
 
-// Walk a multi-level pointer chain: base → [off0] → [off1] → … → final addr.
-inline uintptr_t resolve_ptr_chain(uintptr_t base,
-                                   const uintptr_t* offsets,
-                                   std::size_t      depth) noexcept {
-    uintptr_t addr = base;
-    for (std::size_t i = 0; i < depth; ++i) {
-        addr = mem::read<uintptr_t>(addr);
-        if (!addr) return 0;
-        addr += offsets[i];
-    }
-    return addr;
-}
-
 } // namespace mem
 
 // ---------------------------------------------------------------------------
 // GameState
 //
-// Centralises all knowledge about the target application's global state.
-// Fill in the offsets for your specific target.  The Lua bindings below
-// expose a clean "game" table to scripts.
+// Walks the Roblox pointer chain to cache frequently-needed instance pointers
+// and exposes them to the embedded Lua VM via a "game" global table.
+//
+// Pointer chain:
+//   module_base
+//   + FakeDataModel::Pointer     → fake_dm
+//   + FakeDataModel::RealDataModel → data_model
+//   children scan for "Players" → players_svc
+//   + Player::LocalPlayer        → local_player
+//   + Player::ModelInstance      → character
+//   children scan for "Humanoid" → humanoid
 // ---------------------------------------------------------------------------
 class XCUTOR_API GameState {
 public:
-    // ── Singleton ────────────────────────────────────────────────────────
     static GameState& get() {
         static GameState instance;
         return instance;
     }
 
-    // ── Initialisation ───────────────────────────────────────────────────
-    // Call once after the DLL attaches and the target module has loaded.
     bool init(uintptr_t module_base);
     void shutdown();
 
-    // ── Player entity reads ───────────────────────────────────────────────
-    float        player_health()   const noexcept;
-    float        player_max_health() const noexcept;
-    float        player_stamina()  const noexcept;
-    bool         player_is_alive() const noexcept;
-    uintptr_t    player_ptr()      const noexcept { return cached_player_ptr; }
+    // Re-walk the pointer chain (call after respawn / teleport).
+    void refresh_state() noexcept;
 
-    // ── Player entity writes ──────────────────────────────────────────────
-    void set_player_health(float v)   noexcept;
-    void set_player_stamina(float v)  noexcept;
+    // ── Cached pointers ───────────────────────────────────────────────────
+    uintptr_t data_model()    const noexcept { return data_model_ptr;    }
+    uintptr_t local_player()  const noexcept { return local_player_ptr;  }
+    uintptr_t humanoid()      const noexcept { return humanoid_ptr;      }
 
-    // ── World state reads ─────────────────────────────────────────────────
-    int    current_level()  const noexcept;
-    double game_time()      const noexcept;
-    bool   is_paused()      const noexcept;
+    // ── Player reads ─────────────────────────────────────────────────────
+    float    player_health()     const noexcept;
+    float    player_max_health() const noexcept;
+    float    player_walkspeed()  const noexcept;
+    float    player_jumppower()  const noexcept;
+    bool     player_is_alive()   const noexcept;
+    int64_t  player_userid()     const noexcept;
+    std::string player_display_name() const noexcept;
+
+    // ── Player writes ─────────────────────────────────────────────────────
+    void set_player_health(float v)    noexcept;
+    void set_player_walkspeed(float v) noexcept;
+    void set_player_jumppower(float v) noexcept;
+    void set_player_jump(bool v)       noexcept;
 
     // ── Lua binding ───────────────────────────────────────────────────────
-    // Register a "game" global table in L that exposes the getters/setters.
     void bind_to_lua(lua_State* L);
-
-    // ── Offset table (edit for your target) ──────────────────────────────
-    struct Offsets {
-        // Module-relative static pointer to the local player object.
-        uintptr_t static_player_ptr = 0x00000000;
-
-        // Fields inside the player object.
-        uintptr_t health      = 0x100;
-        uintptr_t max_health  = 0x104;
-        uintptr_t stamina     = 0x108;
-
-        // Module-relative statics.
-        uintptr_t level       = 0x00000000;
-        uintptr_t game_time   = 0x00000000;
-        uintptr_t is_paused   = 0x00000000;
-    } offsets;
 
 private:
     GameState() = default;
 
-    uintptr_t module_base        = 0;
-    uintptr_t cached_player_ptr  = 0;
-    bool      initialised        = false;
+    uintptr_t module_base_      = 0;
+    uintptr_t data_model_ptr    = 0;
+    uintptr_t local_player_ptr  = 0;
+    uintptr_t character_ptr     = 0;
+    uintptr_t humanoid_ptr      = 0;
+    bool      initialised_      = false;
 
-    // Refresh the cached dynamic player pointer (call each frame if needed).
-    void refresh_player_ptr() noexcept;
+    // ── Instance helpers ──────────────────────────────────────────────────
+    static std::string   read_class_name(uintptr_t instance) noexcept;
+    static std::string   read_rbx_string(uintptr_t str_addr) noexcept;
+    static uintptr_t     find_child_by_class(uintptr_t instance,
+                                             std::string_view class_name) noexcept;
 
-    // ── Lua C-function implementations ───────────────────────────────────
-    static int lua_get_health    (lua_State* L);
-    static int lua_set_health    (lua_State* L);
-    static int lua_get_stamina   (lua_State* L);
-    static int lua_set_stamina   (lua_State* L);
-    static int lua_is_alive      (lua_State* L);
-    static int lua_get_level     (lua_State* L);
-    static int lua_get_game_time (lua_State* L);
-    static int lua_is_paused     (lua_State* L);
+    // ── Lua C-function implementations ────────────────────────────────────
+    static int lua_get_health      (lua_State* L);
+    static int lua_set_health      (lua_State* L);
+    static int lua_get_max_health  (lua_State* L);
+    static int lua_get_walkspeed   (lua_State* L);
+    static int lua_set_walkspeed   (lua_State* L);
+    static int lua_get_jumppower   (lua_State* L);
+    static int lua_set_jumppower   (lua_State* L);
+    static int lua_is_alive        (lua_State* L);
+    static int lua_jump            (lua_State* L);
+    static int lua_get_userid      (lua_State* L);
+    static int lua_get_display_name(lua_State* L);
+    static int lua_refresh         (lua_State* L);
 };
