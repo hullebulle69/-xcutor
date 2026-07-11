@@ -9,7 +9,6 @@
     <AssemblyName>Executor</AssemblyName>
     <RootNamespace>Executor</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ApplicationIcon>executor.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
   </PropertyGroup>
 
